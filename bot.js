@@ -39,7 +39,14 @@ const actions = {
                 connection.disconnect();
             } else {
                 queue.urls.shift();
-                this.play(queue[0], connection, msg);
+                this.play(queue[0], connection, msg, false);
+            }
+        });
+        let collector = msg.channel.createCollector(m => m);
+        collector.on('message', m => {
+            if (m.content === '/skip') {
+                dispatcher.end();
+                collector.stop();
             }
         });
     }
