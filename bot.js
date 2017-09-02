@@ -1,5 +1,6 @@
 const Discord = require('discord.js');
 const ytdl = require('ytdl-core');
+const ypi = require('youtube-playlist-info');
 const config = require('./config.json');
 const client = new Discord.Client();
 
@@ -14,6 +15,14 @@ client.on('ready', () => {
     console.log(`Bot connecté en tant que ${client.user.username}`);
 });
 
+function addPlaylist(playlistId) {
+    ypi.playlistInfo(config.yt_api_key, playlistId, playlistItems => {
+        let playlistLength = playlistItems.length;
+        for(let i = 0; i < playlistLength; i++) {
+            queue.urls.push('https://youtube.com/watch?v=' + playlistItems[i].resourceId.videoId);
+        }
+    });
+}
 
 const actions = {
     parse(msg) {
@@ -29,8 +38,7 @@ const actions = {
         }
     },
 
-    play(url, connection, msg, isFirstTime) {
-        if (isFirstTime === true) {queue.urls.push(url)}
+    play(connection, msg) {
         let stream = ytdl(queue.urls[0]);
         dispatcher = connection.playStream(stream);
         dispatcher.on('end', () => {
@@ -39,7 +47,7 @@ const actions = {
                 connection.disconnect();
             } else {
                 queue.urls.shift();
-                this.play(queue[0], connection, msg, false);
+                this.play(connection, msg);
             }
         });
         let collector = msg.channel.createCollector(m => m);
@@ -57,12 +65,27 @@ client.on('message', msg => {
         let args = actions.parse(msg);
         if (actions.match(msg, 'play')) {
             if (queue.urls.length < 1) {
-                client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
-                .then(connection => {
-                    actions.play(args[1],connection, msg, true);
-                });
+                let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
+                if (match && match[2]) {
+                    addPlaylist(match[2]);
+                    client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
+                    .then(connection => {
+                        actions.play(connection, msg);
+                    });
+                } else {
+                    client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
+                    .then(connection => {
+                        queue.urls.push(url);
+                        actions.play(connection, msg);
+                    });
+                }
             } else {
-                queue.urls.push(args[1]);
+                let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
+                if (match && match[2]) {
+                    addPlaylist(match[2]);
+                } else {
+                    queue.urls.push(args[1]);
+                }
             }
         }
     }

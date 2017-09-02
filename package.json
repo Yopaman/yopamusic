@@ -4,6 +4,7 @@
   "dependencies": {
     "discord.js": "^11.1.0",
     "node-opus": "^0.2.6",
+    "youtube-playlist-info": "^0.1.0",
     "ytdl-core": "^0.17.0"
   }
 }
