@@ -16,11 +16,15 @@ client.on('ready', () => {
 });
 
 function addPlaylist(playlistId) {
-    ypi.playlistInfo(config.yt_api_key, playlistId, playlistItems => {
-        let playlistLength = playlistItems.length;
-        for(let i = 0; i < playlistLength; i++) {
-            queue.urls.push('https://youtube.com/watch?v=' + playlistItems[i].resourceId.videoId);
-        }
+    return new Promise((resolve, reject) => {
+        ypi.playlistInfo(config.yt_api_key, playlistId, playlistItems => {
+            let playlistLength = playlistItems.length;
+            for (let i = 0; i < playlistLength; i++) {
+                queue.urls.push('https://youtube.com/watch?v=' + playlistItems[i].resourceId.videoId);
+                resolve();
+                queue.names.push(playlistItems[i].title);
+            }
+        });
     });
 }
 
@@ -30,31 +34,41 @@ const actions = {
         return args;
     },
 
-    match(msg, command) {
-        if (msg.content.startsWith('/' + command)) {
-            return true;
-        } else {
-            return false;
-        }
-    },
-
     play(connection, msg) {
         let stream = ytdl(queue.urls[0]);
         dispatcher = connection.playStream(stream);
-        dispatcher.on('end', () => {
-            if (queue.urls.length === 1) {
-                queue.urls = [];
-                connection.disconnect();
-            } else {
-                queue.urls.shift();
-                this.play(connection, msg);
+        msg.reply('Lecture de : ' + queue.names[0]);
+        dispatcher.on('end', (reason) => {
+            if (reason != 'stop') {
+                if (queue.urls.length === 1) {
+                    queue.urls = [];
+                    queue.names = [];
+                    connection.disconnect();
+                } else {
+                    queue.urls.shift();
+                    queue.names.shift();
+                    this.play(connection, msg);
+                }
             }
+
+        });
+        stream.on('error', function() {
+            msg.reply('Vous n\'avez pas donné un lien youtube valide.');
+            queue.urls.shift();
+            this.play(connection, msg);
         });
         let collector = msg.channel.createCollector(m => m);
-        collector.on('message', m => {
+        collector.on('collect', m => {
             if (m.content === '/skip') {
-                dispatcher.end();
                 collector.stop();
+                dispatcher.end();
+            } else if (m.content === '/stop') {
+                collector.stop();
+                queue.urls = [];
+                queue.names = [];
+                dispatcher.end('stop');
+                connection.disconnect();
+                m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
             }
         });
     }
@@ -63,30 +77,61 @@ const actions = {
 client.on('message', msg => {
     if (msg.channel.type === 'dm') {
         let args = actions.parse(msg);
-        if (actions.match(msg, 'play')) {
+        if (msg.content.startsWith('/play ')) {
             if (queue.urls.length < 1) {
                 let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
                 if (match && match[2]) {
-                    addPlaylist(match[2]);
-                    client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
-                    .then(connection => {
-                        actions.play(connection, msg);
-                    });
+                    addPlaylist(match[2])
+                        .then(() => {
+                            client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
+                                .then(connection => {
+                                    actions.play(connection, msg);
+                                });
+                        });
                 } else {
-                    client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
-                    .then(connection => {
-                        queue.urls.push(url);
-                        actions.play(connection, msg);
-                    });
+                    let youtubeRegex = /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/;
+                    if (youtubeRegex.test(args[1])) {
+                        ytdl.getInfo(args[1], function(err, info) {
+                            queue.names.push(info.title);
+                            client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
+                                .then(connection => {
+                                    queue.urls.push(args[1]);
+                                    actions.play(connection, msg);
+                                });
+                        });
+
+                    } else {
+                        msg.reply('Erreur : Vous n\'avez pas entré un lien youtube valide');
+                        queue.urls.pop();
+                    }
                 }
             } else {
                 let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
                 if (match && match[2]) {
                     addPlaylist(match[2]);
+                    msg.reply('La playlist a été ajoutée.');
                 } else {
                     queue.urls.push(args[1]);
+                    try {
+                        ytdl.getInfo(args[1], function(err, info) {
+                            queue.names.push(info.title);
+                            msg.reply('La vidéo : ' + info.title + ' a été ajoutée à la liste de lecture.');
+                        });
+                    } catch (e) {
+                        msg.reply('Erreur : Vous n\'avez pas entré un lien youtube valide');
+                        queue.urls.pop();
+                    }
+
+
                 }
             }
+        } else if (msg.content.startsWith('/playlistinfo')) {
+            let queueInfo = 'Voici la playlist :\n',
+                queueNamesLength = queue.names.length;
+            for(let i = 0; i < queueNamesLength; i++) {
+                queueInfo += queue.names[i] + ' : ' + queue.urls[i] + '\n';
+            }
+            msg.reply(queueInfo, {code: true, split: true});
         }
     }
 });
