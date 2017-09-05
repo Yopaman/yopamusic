@@ -35,7 +35,7 @@ const actions = {
     },
 
     play(connection, msg) {
-        let stream = ytdl(queue.urls[0]);
+        let stream = ytdl(queue.urls[0], { filter : 'audioonly' });
         dispatcher = connection.playStream(stream);
         msg.reply('Lecture de : ' + queue.names[0]);
         dispatcher.on('end', (reason) => {
