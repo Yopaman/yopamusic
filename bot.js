@@ -77,61 +77,72 @@ const actions = {
 client.on('message', msg => {
     if (msg.channel.type === 'dm') {
         let args = actions.parse(msg);
-        if (msg.content.startsWith('/play ')) {
-            if (queue.urls.length < 1) {
-                let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
-                if (match && match[2]) {
-                    addPlaylist(match[2])
-                        .then(() => {
-                            client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
-                                .then(connection => {
-                                    actions.play(connection, msg);
-                                });
-                        });
-                } else {
-                    let youtubeRegex = /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/;
-                    if (youtubeRegex.test(args[1])) {
-                        ytdl.getInfo(args[1], function(err, info) {
-                            queue.names.push(info.title);
-                            client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
-                                .then(connection => {
-                                    queue.urls.push(args[1]);
-                                    actions.play(connection, msg);
-                                });
-                        });
-
+        if (msg.author.id in config.users) {
+            if (msg.content.startsWith('/play ')) {
+                if (queue.urls.length < 1) {
+                    let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
+                    if (match && match[2]) {
+                        addPlaylist(match[2])
+                            .then(() => {
+                                client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
+                                    .then(connection => {
+                                        actions.play(connection, msg);
+                                    });
+                            });
                     } else {
-                        msg.reply('Erreur : Vous n\'avez pas entré un lien youtube valide');
-                        queue.urls.pop();
+                        let youtubeRegex = /http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-\_]*)(&(amp;)?‌​[\w\?‌​=]*)?/;
+                        if (youtubeRegex.test(args[1])) {
+                            ytdl.getInfo(args[1], function(err, info) {
+                                queue.names.push(info.title);
+                                client.guilds.get(config.server_id).members.get(msg.author.id).voiceChannel.join()
+                                    .then(connection => {
+                                        queue.urls.push(args[1]);
+                                        actions.play(connection, msg);
+                                    });
+                            });
+
+                        } else {
+                            msg.reply('Erreur : Vous n\'avez pas entré un lien youtube valide');
+                            queue.urls.pop();
+                        }
                     }
-                }
-            } else {
-                let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
-                if (match && match[2]) {
-                    addPlaylist(match[2]);
-                    msg.reply('La playlist a été ajoutée.');
                 } else {
-                    queue.urls.push(args[1]);
-                    try {
-                        ytdl.getInfo(args[1], function(err, info) {
-                            queue.names.push(info.title);
-                            msg.reply('La vidéo : ' + info.title + ' a été ajoutée à la liste de lecture.');
-                        });
-                    } catch (e) {
-                        msg.reply('Erreur : Vous n\'avez pas entré un lien youtube valide');
-                        queue.urls.pop();
+                    let match = args[1].match(/^.*(youtu.be\/|list=)([^#\&\?]*).*/);
+                    if (match && match[2]) {
+                        addPlaylist(match[2]);
+                        msg.reply('La playlist a été ajoutée.');
+                    } else {
+                        queue.urls.push(args[1]);
+                        try {
+                            ytdl.getInfo(args[1], function(err, info) {
+                                queue.names.push(info.title);
+                                msg.reply('La vidéo : ' + info.title + ' a été ajoutée à la liste de lecture.');
+                            });
+                        } catch (e) {
+                            msg.reply('Erreur : Vous n\'avez pas entré un lien youtube valide');
+                            queue.urls.pop();
+                        }
+
+
                     }
-
-
                 }
+            } else if (msg.content.startsWith('/playlistinfo')) {
+                let queueInfo = 'Voici la playlist :\n',
+                    queueNamesLength = queue.names.length;
+                for(let i = 0; i < queueNamesLength; i++) {
+                    queueInfo += queue.names[i] + ' : ' + queue.urls[i] + '\n';
+                }
+                msg.reply(queueInfo, {code: true, split: true});
+            } else if (msg.content.startsWith('/help')) {
+                msg.reply('Liste des commandes disponnibles :\n\n/play [lien youtube (playlist ou vidéo)] : Joue le son' +
+                    ' de la vidéo youtube ou ajoute la vidéo à la liste de lacture.\n\n/stop : supprime la liste de' +
+                    ' lecture, stoppe la musique et déconnecte le bot.\n\n/skip : passe à la musique suivante.\n\n' +
+                    '/playlistinfo : affiche la liste de lacture.', {code: true});
+            } else if (msg.author.bot === false) {
+                msg.reply('Commande inconnue (/help pour la liste des commandes)');
             }
-        } else if (msg.content.startsWith('/playlistinfo')) {
-            let queueInfo = 'Voici la playlist :\n',
-                queueNamesLength = queue.names.length;
-            for(let i = 0; i < queueNamesLength; i++) {
-                queueInfo += queue.names[i] + ' : ' + queue.urls[i] + '\n';
-            }
-            msg.reply(queueInfo, {code: true, split: true});
+        } else if (msg.author.bot === false) {
+            msg.reply('Vous n\'êtes pas autorisé à utiliser le bot.');
         }
     }
 });
