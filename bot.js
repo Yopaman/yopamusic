@@ -50,7 +50,6 @@ const actions = {
                     this.play(connection, msg);
                 }
             }
-
         });
         stream.on('error', function() {
             msg.reply('Vous n\'avez pas donné un lien youtube valide.');
@@ -75,7 +74,7 @@ const actions = {
 };
 
 client.on('message', msg => {
-    if (msg.channel.type === 'dm') {
+    if (msg.channel.type === 'dm' && msg.content != '/skip' && msg.content != '/stop') {
         let args = actions.parse(msg);
         if (msg.author.id in config.users) {
             if (msg.content.startsWith('/play ')) {
