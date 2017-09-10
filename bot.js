@@ -59,10 +59,8 @@ const actions = {
 
         client.on('message', m => {
             if (m.content === '/skip') {
-                collector.stop();
                 dispatcher.end();
             } else if (m.content === '/stop') {
-                collector.stop();
                 queue.urls = [];
                 queue.names = [];
                 dispatcher.end('stop');
