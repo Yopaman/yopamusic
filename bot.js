@@ -56,8 +56,8 @@ const actions = {
             queue.urls.shift();
             this.play(connection, msg);
         });
-        let collector = msg.channel.createCollector(m => m);
-        collector.on('collect', m => {
+
+        client.on('message', m => {
             if (m.content === '/skip') {
                 collector.stop();
                 dispatcher.end();
