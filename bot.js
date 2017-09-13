@@ -58,17 +58,16 @@ const actions = {
         });
 
         client.on('message', m => {
-            if (m.content === '/skip') {
-                dispatcher.end('stop');
-                queue.urls.shift();
-                queue.names.shift();
-                this.play(connection, msg);
-            } else if (m.content === '/stop') {
-                queue.urls = [];
-                queue.names = [];
-                dispatcher.end('stop');
-                connection.disconnect();
-                m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
+            if (msg.author.bot === false) {
+                if (m.content === '/skip') {
+                    dispatcher.end();
+                } else if (m.content === '/stop') {
+                    queue.urls = [];
+                    queue.names = [];
+                    dispatcher.end('stop');
+                    connection.disconnect();
+                    m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
+                }
             }
         });
     }
