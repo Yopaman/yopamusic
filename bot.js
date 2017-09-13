@@ -59,8 +59,10 @@ const actions = {
 
         client.on('message', m => {
             if (m.content === '/skip') {
+                m.acknowledge();
                 dispatcher.end();
             } else if (m.content === '/stop') {
+                m.acknowledge();
                 queue.urls = [];
                 queue.names = [];
                 dispatcher.end('stop');
