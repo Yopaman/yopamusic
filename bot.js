@@ -58,7 +58,7 @@ const actions = {
         });
 
         client.on('message', m => {
-            if (msg.author.bot === false) {
+            if (m.author.bot === false) {
                 if (m.content === '/skip') {
                     dispatcher.end();
                 } else if (m.content === '/stop') {
