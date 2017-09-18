@@ -39,6 +39,7 @@ const actions = {
         dispatcher = connection.playStream(stream);
         msg.reply('Lecture de : ' + queue.names[0]);
         dispatcher.on('end', (reason) => {
+            collector.stop();
             if (reason != 'stop') {
                 if (queue.urls.length === 1) {
                     queue.urls = [];
@@ -62,7 +63,6 @@ const actions = {
         collector.on('collect', m => {
             if (m.author.bot === false) {
                 if (m.content === '/skip') {
-                    collector.stop();
                     dispatcher.end();
                 } else if (m.content === '/stop') {
                     queue.urls = [];
