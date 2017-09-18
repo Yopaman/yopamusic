@@ -57,10 +57,12 @@ const actions = {
             this.play(connection, msg);
         });
 
-        client.on('message', m => {
+        let collector = msg.channel.createCollector(m => m);
+
+        collector.on('collect', m => {
             if (m.author.bot === false) {
                 if (m.content === '/skip') {
-                    client.removeAllListeners('message');
+                    collector.stop();
                     dispatcher.end();
                 } else if (m.content === '/stop') {
                     queue.urls = [];
@@ -68,7 +70,7 @@ const actions = {
                     dispatcher.end('stop');
                     connection.disconnect();
                     m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
-                    client.removeAllListeners('message');
+                    collector.stop();
                 }
             }
         });
