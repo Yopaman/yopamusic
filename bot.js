@@ -38,6 +38,23 @@ const actions = {
         let stream = ytdl(queue.urls[0], { filter : 'audioonly' });
         dispatcher = connection.playStream(stream);
         msg.reply('Lecture de : ' + queue.names[0]);
+
+        let collector = msg.channel.createCollector(m => m);
+
+        collector.on('collect', m => {
+            if (m.author.bot === false) {
+                if (m.content === '/skip') {
+                    dispatcher.end();
+                } else if (m.content === '/stop') {
+                    queue.urls = [];
+                    queue.names = [];
+                    dispatcher.end('stop');
+                    connection.disconnect();
+                    m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
+                }
+            }
+        });
+
         dispatcher.on('end', (reason) => {
             collector.stop();
             if (reason != 'stop') {
@@ -52,27 +69,11 @@ const actions = {
                 }
             }
         });
+
         stream.on('error', function() {
             msg.reply('Vous n\'avez pas donné un lien youtube valide.');
             queue.urls.shift();
             this.play(connection, msg);
-        });
-
-        let collector = msg.channel.createCollector(m => m);
-
-        collector.on('collect', m => {
-            if (m.author.bot === false) {
-                if (m.content === '/skip') {
-                    dispatcher.end();
-                } else if (m.content === '/stop') {
-                    queue.urls = [];
-                    queue.names = [];
-                    dispatcher.end('stop');
-                    connection.disconnect();
-                    m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
-                    collector.stop();
-                }
-            }
         });
     }
 };
