@@ -60,6 +60,7 @@ const actions = {
         client.on('message', m => {
             if (m.author.bot === false) {
                 if (m.content === '/skip') {
+                    client.removeAllListeners('message');
                     dispatcher.end();
                 } else if (m.content === '/stop') {
                     queue.urls = [];
@@ -67,6 +68,7 @@ const actions = {
                     dispatcher.end('stop');
                     connection.disconnect();
                     m.reply('La liste de lecture a été supprimée et le bot a quitté le channel.');
+                    client.removeAllListeners('message');
                 }
             }
         });
